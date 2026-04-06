@@ -13,6 +13,7 @@ locals {
   name_prefix  = "${var.app_name}-${var.environment}"
   ecr_registry = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
   ecr_url      = "${local.ecr_registry}/${aws_ecr_repository.app.name}"
+  subdomain    = trimsuffix(trimsuffix(var.domain_name, var.parent_domain_name), ".")
 }
 
 # --- ECR ---
@@ -245,7 +246,7 @@ resource "aws_route53_record" "app_a" {
 resource "aws_lightsail_domain_entry" "ns_delegation" {
   count       = 4 # Route53 always returns exactly 4 name servers
   domain_name = var.parent_domain_name
-  name        = var.domain_name
+  name        = local.subdomain
   type        = "NS"
   target      = aws_route53_zone.app.name_servers[count.index]
 }
