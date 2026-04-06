@@ -70,7 +70,7 @@ jobs:
               \"aws ecr get-login-password --region ${{ inputs.aws_region }} | docker login --username AWS --password-stdin ${REGISTRY}\",
               \"docker pull ${IMAGE_URI}\",
               \"cd /opt/${APP_NAME}\",
-              \"sed -i 's|image:.*|image: ${IMAGE_URI}|g' docker-compose.yml\",
+              \"sed -i 's|image: *${REGISTRY}/.*|image: ${IMAGE_URI}|g' docker-compose.yml\",
               \"/usr/local/bin/docker-compose up -d --force-recreate\",
               \"docker image prune -f\"
             ]" \
