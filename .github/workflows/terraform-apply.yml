@@ -81,13 +81,15 @@ jobs:
           terraform_wrapper: false
 
       - name: Export TF_VAR secrets
-        if: ${{ secrets.tf_vars != '' }}
+        env:
+          TF_VARS_RAW: ${{ secrets.tf_vars }}
         run: |
+          [ -z "$TF_VARS_RAW" ] && exit 0
           while IFS= read -r line; do
             [ -z "$line" ] && continue
             echo "::add-mask::${line#*=}"
             echo "$line" >> "$GITHUB_ENV"
-          done <<< "${{ secrets.tf_vars }}"
+          done <<< "$TF_VARS_RAW"
 
       - name: Terraform Init
         working-directory: ${{ inputs.terraform_dir }}
