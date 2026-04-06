@@ -243,7 +243,7 @@ resource "aws_route53_record" "app_a" {
 # --- Lightsail — NS delegation from parent domain ---
 
 resource "aws_lightsail_domain_entry" "ns_delegation" {
-  count       = length(aws_route53_zone.app.name_servers)
+  count       = 4 # Route53 always returns exactly 4 name servers
   domain_name = var.parent_domain_name
   name        = var.domain_name
   type        = "NS"
