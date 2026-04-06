@@ -62,3 +62,8 @@ output "name_prefix" {
   description = "Resource naming prefix (app_name-environment)"
   value       = local.name_prefix
 }
+
+output "instance_role_name" {
+  description = "IAM role name for the EC2 instance (for attaching extra policies)"
+  value       = aws_iam_role.ec2.name
+}
