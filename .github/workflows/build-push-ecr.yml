@@ -1,0 +1,94 @@
+name: Build & Push to ECR (ARM64)
+
+on:
+  workflow_call:
+    inputs:
+      aws_region:
+        description: "AWS region"
+        required: false
+        type: string
+        default: "us-east-1"
+      ecr_repository_name:
+        description: "ECR repository name (e.g. growth-guard-production/app)"
+        required: true
+        type: string
+      image_tag:
+        description: "Image tag override (defaults to git SHA)"
+        required: false
+        type: string
+        default: ""
+      dockerfile:
+        description: "Path to Dockerfile"
+        required: false
+        type: string
+        default: "Dockerfile"
+      context:
+        description: "Docker build context"
+        required: false
+        type: string
+        default: "."
+      platforms:
+        description: "Target platforms"
+        required: false
+        type: string
+        default: "linux/arm64"
+    secrets:
+      aws_deploy_role_arn:
+        description: "IAM Role ARN for OIDC-based deploy"
+        required: true
+    outputs:
+      image_tag:
+        description: "Tag applied to the pushed image"
+        value: ${{ jobs.build.outputs.image_tag }}
+      full_image_uri:
+        description: "Full image URI (registry/repo:tag)"
+        value: ${{ jobs.build.outputs.full_image_uri }}
+
+jobs:
+  build:
+    name: Build ARM64 & Push
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tag }}
+      full_image_uri: ${{ steps.meta.outputs.full_uri }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.aws_deploy_role_arn }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Resolve image metadata
+        id: meta
+        run: |
+          TAG="${{ inputs.image_tag }}"
+          [ -z "$TAG" ] && TAG="${{ github.sha }}"
+          ECR_URL="${{ steps.ecr-login.outputs.registry }}/${{ inputs.ecr_repository_name }}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "ecr_url=${ECR_URL}" >> "$GITHUB_OUTPUT"
+          echo "full_uri=${ECR_URL}:${TAG}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          push: true
+          platforms: ${{ inputs.platforms }}
+          tags: |
+            ${{ steps.meta.outputs.ecr_url }}:${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.ecr_url }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
