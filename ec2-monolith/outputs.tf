@@ -67,3 +67,8 @@ output "instance_role_name" {
   description = "IAM role name for the EC2 instance (for attaching extra policies)"
   value       = aws_iam_role.ec2.name
 }
+
+output "compose_ssm_parameter" {
+  description = "SSM parameter name storing the docker-compose content"
+  value       = aws_ssm_parameter.docker_compose.name
+}

@@ -20,6 +20,10 @@ on:
         description: "Application name (used for working directory /opt/<app_name>)"
         required: true
         type: string
+      compose_ssm_parameter:
+        description: "SSM parameter name storing docker-compose content"
+        required: true
+        type: string
       health_check_path:
         description: "HTTP health check path"
         required: false
@@ -29,7 +33,7 @@ on:
         description: "HTTP health check port"
         required: false
         type: number
-        default: 8000
+        default: 80
       deploy_timeout_seconds:
         description: "SSM command timeout"
         required: false
@@ -58,9 +62,9 @@ jobs:
           INSTANCE_ID: ${{ inputs.instance_id }}
           IMAGE_URI: ${{ inputs.ecr_image_uri }}
           APP_NAME: ${{ inputs.app_name }}
-          ECR_REGISTRY: ${{ inputs.ecr_image_uri }}
+          SSM_PARAM: ${{ inputs.compose_ssm_parameter }}
         run: |
-          REGISTRY="${ECR_REGISTRY%%/*}"
+          REGISTRY="${IMAGE_URI%%/*}"
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
@@ -69,8 +73,9 @@ jobs:
               \"set -euo pipefail\",
               \"aws ecr get-login-password --region ${{ inputs.aws_region }} | docker login --username AWS --password-stdin ${REGISTRY}\",
               \"docker pull ${IMAGE_URI}\",
+              \"aws ssm get-parameter --name '${SSM_PARAM}' --region ${{ inputs.aws_region }} --query Parameter.Value --output text > /opt/${APP_NAME}/docker-compose.yml\",
+              \"sed -i 's|image: *${REGISTRY}/.*|image: ${IMAGE_URI}|g' /opt/${APP_NAME}/docker-compose.yml\",
               \"cd /opt/${APP_NAME}\",
-              \"sed -i 's|image: *${REGISTRY}/.*|image: ${IMAGE_URI}|g' docker-compose.yml\",
               \"/usr/local/bin/docker-compose up -d --force-recreate\",
               \"docker image prune -f\"
             ]" \
@@ -120,11 +125,11 @@ jobs:
           HEALTH_CMD_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --parameters commands='["curl -sf http://localhost:${{ inputs.health_check_port }}${{ inputs.health_check_path }} || exit 1"]' \
+            --parameters commands='["for i in $(seq 1 6); do curl -sf http://localhost:${{ inputs.health_check_port }}${{ inputs.health_check_path }} && exit 0; echo \"Waiting for health... (attempt $i/6)\"; sleep 5; done; exit 1"]' \
             --query "Command.CommandId" \
             --output text)
 
-          sleep 15
+          sleep 30
 
           STATUS=$(aws ssm get-command-invocation \
             --command-id "$HEALTH_CMD_ID" \
@@ -134,6 +139,11 @@ jobs:
 
           if [ "$STATUS" != "Success" ]; then
             echo "Health check failed (status: $STATUS)"
+            aws ssm get-command-invocation \
+              --command-id "$HEALTH_CMD_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --query "StandardErrorContent" \
+              --output text
             exit 1
           fi
 

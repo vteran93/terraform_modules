@@ -53,6 +53,9 @@ on:
       app_name:
         description: "Application name"
         value: ${{ jobs.apply.outputs.app_name }}
+      compose_ssm_parameter:
+        description: "SSM parameter name storing docker-compose content"
+        value: ${{ jobs.apply.outputs.compose_ssm_parameter }}
 
 jobs:
   apply:
@@ -64,6 +67,7 @@ jobs:
       ecr_repository_name: ${{ steps.outputs.outputs.ecr_repository_name }}
       elastic_ip: ${{ steps.outputs.outputs.elastic_ip }}
       app_name: ${{ steps.outputs.outputs.app_name }}
+      compose_ssm_parameter: ${{ steps.outputs.outputs.compose_ssm_parameter }}
 
     steps:
       - uses: actions/checkout@v4
@@ -113,3 +117,4 @@ jobs:
           echo "ecr_repository_name=$(terraform output -raw ecr_repository_name)" >> "$GITHUB_OUTPUT"
           echo "elastic_ip=$(terraform output -raw elastic_ip)" >> "$GITHUB_OUTPUT"
           echo "app_name=$(terraform output -raw app_name 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
+          echo "compose_ssm_parameter=$(terraform output -raw compose_ssm_parameter 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"

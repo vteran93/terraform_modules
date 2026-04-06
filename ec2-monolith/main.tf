@@ -250,3 +250,32 @@ resource "aws_lightsail_domain_entry" "ns_delegation" {
   type        = "NS"
   target      = aws_route53_zone.app.name_servers[count.index]
 }
+
+# --- SSM Parameter — docker-compose content (synced on every deploy) ---
+
+resource "aws_ssm_parameter" "docker_compose" {
+  name  = "/${var.app_name}/${var.environment}/docker-compose"
+  type  = "String"
+  tier  = "Advanced"
+  value = var.docker_compose_content
+
+  tags = {
+    Name = "${local.name_prefix}-docker-compose"
+  }
+}
+
+resource "aws_iam_role_policy" "ssm_compose_read" {
+  name = "ssm-compose-read"
+  role = aws_iam_role.ec2.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "ssm:GetParameter"
+        Resource = aws_ssm_parameter.docker_compose.arn
+      }
+    ]
+  })
+}
