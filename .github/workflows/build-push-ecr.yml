@@ -27,11 +27,11 @@ on:
         required: false
         type: string
         default: "."
-      platforms:
-        description: "Target platforms"
+      runner:
+        description: "GitHub runner label (default: native ARM64)"
         required: false
         type: string
-        default: "linux/arm64"
+        default: "ubuntu-24.04-arm"
     secrets:
       aws_deploy_role_arn:
         description: "IAM Role ARN for OIDC-based deploy"
@@ -47,7 +47,7 @@ on:
 jobs:
   build:
     name: Build ARM64 & Push
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     outputs:
       image_tag: ${{ steps.meta.outputs.tag }}
       full_image_uri: ${{ steps.meta.outputs.full_uri }}
@@ -75,10 +75,6 @@ jobs:
           echo "ecr_url=${ECR_URL}" >> "$GITHUB_OUTPUT"
           echo "full_uri=${ECR_URL}:${TAG}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/build-push-action@v5
@@ -86,7 +82,6 @@ jobs:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile }}
           push: true
-          platforms: ${{ inputs.platforms }}
           tags: |
             ${{ steps.meta.outputs.ecr_url }}:${{ steps.meta.outputs.tag }}
             ${{ steps.meta.outputs.ecr_url }}:latest
