@@ -116,6 +116,12 @@ variable "parent_domain_name" {
   default     = "growthguard.io"
 }
 
+variable "create_dns_record" {
+  description = "Create a simple A record pointing to the EIP. Set to false when using failover routing externally."
+  type        = bool
+  default     = true
+}
+
 # --------------------------------------------------------------------------
 # Docker Compose
 # --------------------------------------------------------------------------

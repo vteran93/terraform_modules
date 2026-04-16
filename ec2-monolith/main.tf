@@ -234,6 +234,7 @@ resource "aws_route53_zone" "app" {
 }
 
 resource "aws_route53_record" "app_a" {
+  count   = var.create_dns_record ? 1 : 0
   zone_id = aws_route53_zone.app.zone_id
   name    = var.domain_name
   type    = "A"
