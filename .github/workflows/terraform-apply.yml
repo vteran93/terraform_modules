@@ -13,18 +13,6 @@ on:
         required: false
         type: string
         default: "infra/terraform"
-      backend_bucket:
-        description: "S3 bucket for Terraform state"
-        required: true
-        type: string
-      backend_key:
-        description: "S3 key for Terraform state file"
-        required: true
-        type: string
-      backend_dynamodb_table:
-        description: "DynamoDB table for state locking"
-        required: true
-        type: string
       terraform_version:
         description: "Terraform version to install"
         required: false
@@ -37,6 +25,15 @@ on:
       tf_vars:
         description: "Newline-separated TF_VAR_* exports (e.g. TF_VAR_db_password=xxx)"
         required: false
+      backend_bucket:
+        description: "S3 bucket for Terraform state"
+        required: true
+      backend_key:
+        description: "S3 key for Terraform state file"
+        required: true
+      backend_dynamodb_table:
+        description: "DynamoDB table for state locking"
+        required: true
     outputs:
       instance_id:
         description: "EC2 instance ID"
@@ -99,10 +96,10 @@ jobs:
         working-directory: ${{ inputs.terraform_dir }}
         run: |
           terraform init -input=false \
-            -backend-config="bucket=${{ inputs.backend_bucket }}" \
-            -backend-config="key=${{ inputs.backend_key }}" \
+            -backend-config="bucket=${{ secrets.backend_bucket }}" \
+            -backend-config="key=${{ secrets.backend_key }}" \
             -backend-config="region=${{ inputs.aws_region }}" \
-            -backend-config="dynamodb_table=${{ inputs.backend_dynamodb_table }}"
+            -backend-config="dynamodb_table=${{ secrets.backend_dynamodb_table }}"
 
       - name: Terraform Apply
         working-directory: ${{ inputs.terraform_dir }}
