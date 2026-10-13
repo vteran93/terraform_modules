@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: "infra/terraform"
+      runner:
+        description: "Runner label: a GitHub-hosted image or a self-hosted label (e.g. self-hosted)"
+        required: false
+        type: string
+        default: "ubuntu-latest"
       terraform_version:
         description: "Terraform version to install"
         required: false
@@ -57,7 +62,7 @@ on:
 jobs:
   apply:
     name: Terraform Apply
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     outputs:
       instance_id: ${{ steps.outputs.outputs.instance_id }}
       ecr_repository_url: ${{ steps.outputs.outputs.ecr_repository_url }}

@@ -3,6 +3,11 @@ name: Deploy via SSM
 on:
   workflow_call:
     inputs:
+      runner:
+        description: "Runner label: a GitHub-hosted image or a self-hosted label (e.g. self-hosted)"
+        required: false
+        type: string
+        default: "ubuntu-latest"
       aws_region:
         description: "AWS region"
         required: false
@@ -47,7 +52,7 @@ on:
 jobs:
   deploy:
     name: Deploy & Verify
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
 
     steps:
       - name: Configure AWS credentials (OIDC)
