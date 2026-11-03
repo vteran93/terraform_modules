@@ -94,4 +94,13 @@ resource "aws_wafv2_web_acl" "this" {
   }
 
   tags = merge(var.tags, { Name = var.name })
+
+  # AWS refuses DeleteWebACL while a distribution still references the ACL
+  # (WAFAssociatedItemException). With create_before_destroy Terraform updates
+  # the dependent distributions (detach / point at the replacement) before it
+  # deletes this ACL, so flipping `enabled` to false or renaming the ACL works
+  # in a single apply.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
